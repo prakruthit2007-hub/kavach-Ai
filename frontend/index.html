@@ -17,16 +17,13 @@
     .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     label { font-size: 13px; font-weight: 600; color: #cbd5e1; margin: 0; }
     .clear-btn { background: none; border: none; color: #94a3b8; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
-    .clear-btn:hover { color: #fff; }
     textarea, select { width: 100%; background: #020617; border: 1px solid #334155; border-radius: 12px; padding: 12px; color: #fff; font-size: 14px; }
     .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
     .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 999px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
-    .chip:hover { background: #334155; color: #fff; }
     .upload-box { border: 1.5px dashed #334155; background: #020617; border-radius: 12px; padding: 12px; text-align: center; margin: 12px 0; cursor: pointer; }
-    .upload-box:hover { border-color: #ef4444; }
-    .upload-label { font-size: 13px; color: #cbd5e1; font-weight: 600; display: block; cursor: pointer; }
+    .upload-label { font-size: 13px; color: #cbd5e1; font-weight: 600; display: block; }
     .upload-sub { font-size: 11px; color: #64748b; display: block; margin-top: 2px; }
-    #previewImg { max-width: 100%; max-height: 160px; border-radius: 8px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
+    #previewImg { max-width: 100%; max-height: 160px; border-radius: 8px; margin: 10px auto 0; display: none; }
     .btn-primary { width: 100%; background: #dc2626; color: #fff; border: none; border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px; }
     .btn-primary:disabled { opacity: 0.6; }
     .result-card { display: none; border-radius: 16px; padding: 16px; border: 1px solid; }
@@ -47,28 +44,24 @@
       <h1>Kavach <span>AI</span></h1>
       <p>Vernacular UPI, SMS & Screenshot Scam Detector</p>
     </header>
-
     <div class="card">
       <div class="label-row">
         <label for="messageInput">Paste Message or Link</label>
         <button type="button" class="clear-btn" id="clearBtn">Clear All</button>
       </div>
       <textarea id="messageInput" rows="3" placeholder="Paste suspicious SMS, WhatsApp forward, or payment link..."></textarea>
-
       <div class="chips">
         <button type="button" class="chip" id="c1">⚡ Electricity Scam</button>
         <button type="button" class="chip" id="c2">🗣️ Kanglish KYC</button>
         <button type="button" class="chip" id="c3">💸 Fake UPI Prize</button>
         <button type="button" class="chip" id="c4">✅ Safe Bank SMS</button>
       </div>
-
       <div class="upload-box" id="uploadBox">
         <input type="file" id="imageInput" accept="image/*" style="display: none;" />
         <span class="upload-label">📸 Or Upload Scam Screenshot / QR</span>
         <span class="upload-sub" id="fileNameLabel">Tap to select WhatsApp, SMS, or UPI payment screenshot</span>
         <img id="previewImg" alt="Screenshot preview" />
       </div>
-
       <div class="label-row" style="margin-top: 10px;">
         <label for="languageSelect">Preferred Language</label>
       </div>
@@ -78,10 +71,8 @@
         <option value="Hindi">हिंदी (Hindi)</option>
         <option value="Tamil">தமிழ் (Tamil)</option>
       </select>
-
       <button type="button" class="btn-primary" id="verifyBtn">Verify Now</button>
     </div>
-
     <div id="resultCard" class="result-card">
       <span id="riskBadge" class="badge"></span>
       <div class="reasons-box">
@@ -93,7 +84,6 @@
       <p id="voiceStatus" class="voice-status"></p>
     </div>
   </div>
-
   <script>
     let latestSpoken = "";
     const box = document.getElementById("messageInput");
@@ -102,7 +92,6 @@
     const fileNameLabel = document.getElementById("fileNameLabel");
 
     document.getElementById("uploadBox").onclick = () => imageInput.click();
-
     imageInput.onchange = () => {
       const file = imageInput.files[0];
       if (!file) return;
@@ -112,41 +101,31 @@
       previewImg.style.display = "block";
     };
 
-    function resetInputs() {
-      box.value = "";
-      imageInput.value = "";
-      previewImg.style.display = "none";
-      previewImg.src = "";
-      fileNameLabel.innerText = "Tap to select WhatsApp, SMS, or UPI payment screenshot";
-      document.getElementById("resultCard").className = "result-card";
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-    }
-
-    document.getElementById("clearBtn").onclick = resetInputs;
-
-    function setSampleText(txt) {
+    function setSample(txt) {
       imageInput.value = "";
       previewImg.style.display = "none";
       fileNameLabel.innerText = "Tap to select WhatsApp, SMS, or UPI payment screenshot";
       box.value = txt;
     }
 
-    document.getElementById("c1").onclick = () => setSampleText("Dear Customer, your BESCOM electricity bill is pending. Pay now to avoid disconnection tonight. Click: http://bit.ly");
-    document.getElementById("c2").onclick = () => setSampleText("Nimma SBI account KYC expire agide! Urgent update madi illandre account block agutte: http://tinyurl.com");
-    document.getElementById("c3").onclick = () => setSampleText("Congratulations! You won Rs. 15,000 cashback. Approve UPI collect request on claimprize@okicici to receive money.");
-    document.getElementById("c4").onclick = () => setSampleText("Rs.500.00 credited to A/c XX1234 via UPI Ref 6328192012. Thank you for banking with SBI.");
+    document.getElementById("clearBtn").onclick = () => {
+      setSample("");
+      document.getElementById("resultCard").className = "result-card";
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    };
+
+    document.getElementById("c1").onclick = () => setSample("Dear Customer, your BESCOM electricity bill is pending. Pay now to avoid disconnection tonight. Click: http://bit.ly");
+    document.getElementById("c2").onclick = () => setSample("Nimma SBI account KYC expire agide! Urgent update madi illandre account block agutte: http://tinyurl.com");
+    document.getElementById("c3").onclick = () => setSample("Congratulations! You won Rs. 15,000 cashback. Approve UPI collect request on claimprize@okicici to receive money.");
+    document.getElementById("c4").onclick = () => setSample("Rs.500.00 credited to A/c XX1234 via UPI Ref 6328192012. Thank you for banking with SBI.");
 
     document.getElementById("verifyBtn").onclick = async () => {
       const message = box.value.trim();
       const imageFile = imageInput.files[0];
       const language = document.getElementById("languageSelect").value;
-
-      if (!message && !imageFile) {
-        alert("Please paste a message, tap a sample, or upload a screenshot first.");
-        return;
-      }
-
+      if (!message && !imageFile) return alert("Please paste a message, tap a sample, or upload a screenshot first.");
       if (window.speechSynthesis) window.speechSynthesis.cancel();
+
       const btn = document.getElementById("verifyBtn");
       btn.innerText = imageFile ? "Scanning Screenshot..." : "Scanning Message...";
       btn.disabled = true;
@@ -154,10 +133,10 @@
       try {
         let res;
         if (imageFile) {
-          const formData = new FormData();
-          formData.append("file", imageFile);
-          formData.append("language", language);
-          res = await fetch("/analyze-image", { method: "POST", body: formData });
+          const fd = new FormData();
+          fd.append("file", imageFile);
+          fd.append("language", language);
+          res = await fetch("/analyze-image", { method: "POST", body: fd });
         } else {
           res = await fetch("/analyze", {
             method: "POST",
@@ -166,35 +145,47 @@
           });
         }
 
-        let data = await res.json();
+        let data = res.ok ? await res.json() : { use_ocr: Boolean(imageFile) };
 
-             // Automatic OCR backup if Vision AI hits a temporary 503 server load spike
-     if (imageFile && data.use_ocr) {
-       btn.innerText = "Reading Screenshot Text...";
-       const ocrResult = await Tesseract.recognize(imageFile, "eng");
-       const extractedText = ocrResult.data.text.trim();
-       const fallbackRes = await fetch("/analyze", {
-         method: "POST",
-         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify({
-           message: extractedText || "Unreadable image text",
-           language
-         })
-       });
-       data = await fallbackRes.json();
-     }
+        if (imageFile && data.use_ocr) {
+          btn.innerText = "Reading Screenshot Text...";
+          let extractedText = "";
+          try {
+            if (typeof Tesseract === "undefined") {
+              await new Promise((resolve, reject) => {
+                const s = document.createElement("script");
+                s.src = "https://jsdelivr.net";
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+              });
+            }
+            const ocrResult = await Tesseract.recognize(imageFile, "eng");
+            extractedText = (ocrResult.data.text || "").trim();
+          } catch (ocrErr) {
+            console.error(ocrErr);
+          }
 
+          if (extractedText) {
+            const fallbackRes = await fetch("/analyze", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ message: extractedText, language })
+            });
+            data = await fallbackRes.json();
+          } else {
+            data = {
+              risk_level: "Suspicious",
+              reasons: ["Vision AI is temporarily busy. Please tap Verify Now again in a few seconds."],
+              spoken_summary: "The image scanner is temporarily busy. Please try again in a few seconds."
+            };
+          }
+        }
 
         const card = document.getElementById("resultCard");
         const badge = document.getElementById("riskBadge");
-        card.className = "result-card " + (
-          data.risk_level === "High Risk" ? "result-high" :
-          data.risk_level === "Suspicious" ? "result-med" : "result-safe"
-        );
-        badge.innerText =
-          data.risk_level === "High Risk" ? "⚠️ HIGH RISK — SCAM DETECTED" :
-          data.risk_level === "Suspicious" ? "⚠️ SUSPICIOUS" : "✅ SAFE — NO THREAT FOUND";
-
+        card.className = "result-card " + (data.risk_level === "High Risk" ? "result-high" : data.risk_level === "Suspicious" ? "result-med" : "result-safe");
+        badge.innerText = data.risk_level === "High Risk" ? "⚠️ HIGH RISK — SCAM DETECTED" : data.risk_level === "Suspicious" ? "⚠️ SUSPICIOUS" : "✅ SAFE — NO THREAT FOUND";
         document.getElementById("reasonsList").innerHTML = data.reasons.map(r => "<li>" + r + "</li>").join("");
         latestSpoken = data.spoken_summary;
         document.getElementById("spokenPreview").innerText = "Voice Summary: " + latestSpoken;
@@ -208,22 +199,15 @@
 
     document.getElementById("audioBtn").onclick = () => {
       if (!latestSpoken || !window.speechSynthesis) return;
-      if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-        return;
-      }
-
+      if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); return; }
       const langMap = { English: "en-IN", Kannada: "kn-IN", Hindi: "hi-IN", Tamil: "ta-IN" };
       const code = langMap[document.getElementById("languageSelect").value] || "en-IN";
       const u = new SpeechSynthesisUtterance(latestSpoken);
       u.lang = code;
       u.rate = 0.95;
-
       const voices = window.speechSynthesis.getVoices();
-      const match = voices.find(v => v.lang.toLowerCase() === code.toLowerCase()) ||
-                    voices.find(v => v.lang.toLowerCase().startsWith(code.slice(0, 2)));
+      const match = voices.find(v => v.lang.toLowerCase() === code.toLowerCase()) || voices.find(v => v.lang.toLowerCase().startsWith(code.slice(0, 2)));
       if (match) u.voice = match;
-
       document.getElementById("voiceStatus").innerText = match ? "Playing: " + match.name : "Playing: " + code;
       window.speechSynthesis.speak(u);
     };
