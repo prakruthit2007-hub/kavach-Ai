@@ -1,3 +1,5 @@
+import io
+from PIL import Image
 import os
 import re
 import json
@@ -18,7 +20,7 @@ ocr_engine = RapidOCR()
 load_dotenv()
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY"),
-    http_options={"timeout": 12000}
+    http_options={"timeout": 4000}
 )
 
 app = FastAPI()
@@ -128,22 +130,6 @@ def analyze_message(req: ScamRequest):
     3. Write a 1-2 sentence warning or reassurance in "spoken_summary" strictly in {req.language}.
     """
 
-    for attempt in range(2):
-        try:
-            response = client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=AIAnalysis,
-                    temperature=0.1,
-                ),
-            )
-            return json.loads(response.text)
-        except Exception as e:
-            print(f"Text attempt {attempt + 1} failed: {e}")
-            time.sleep(0.5)
-
     fb = REGIONAL_FALLBACKS.get(req.language, REGIONAL_FALLBACKS["English"])
     if len(heuristic_flags) > 0:
         return {"risk_level": "High Risk", "reasons": heuristic_flags, "spoken_summary": fb["scam_summary"]}
@@ -156,6 +142,13 @@ async def analyze_image(file: UploadFile = File(...), language: str = Form("Engl
     # Step 1: Extract text from screenshot directly on server using RapidOCR (0 API quota used!)
     extracted_text = ""
     try:
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        if img.width > 900:
+            ratio = 900 / img.width
+            img = img.resize((900, int(img.height * ratio)))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        image_bytes = buf.getvalue()
         result, _ = ocr_engine(image_bytes)
         if result:
             extracted_text = " ".join([line for line in result])
