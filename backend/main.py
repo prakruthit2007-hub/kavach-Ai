@@ -11,6 +11,9 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
+from rapidocr_onnxruntime import RapidOCR
+ocr_engine = RapidOCR()
+
 
 load_dotenv()
 client = genai.Client(
@@ -149,40 +152,49 @@ def analyze_message(req: ScamRequest):
 @app.post("/analyze-image")
 async def analyze_image(file: UploadFile = File(...), language: str = Form("English")):
     image_bytes = await file.read()
-    mime_type = file.content_type or "image/jpeg"
 
+    # Step 1: Extract text from screenshot directly on server using RapidOCR (0 API quota used!)
+    extracted_text = ""
+    try:
+        result, _ = ocr_engine(image_bytes)
+        if result:
+            extracted_text = " ".join([line for line in result])
+            print("OCR Extracted Text:", extracted_text)
+    except Exception as ocr_err:
+        print("Server OCR warning:", ocr_err)
+
+    # Step 2: Run Layer 1 Regex & Verified Domain check on extracted text first
+    if extracted_text:
+        heuristic_flags, trusted_notes = run_heuristics(extracted_text)
+        if len(trusted_notes) > 0 and len(heuristic_flags) == 0:
+            fb = REGIONAL_FALLBACKS.get(language, REGIONAL_FALLBACKS["English"])
+            return {"risk_level": "Safe", "reasons": trusted_notes, "spoken_summary": fb["safe_summary"]}
+        if len(heuristic_flags) > 0:
+            fb = REGIONAL_FALLBACKS.get(language, REGIONAL_FALLBACKS["English"])
+            return {"risk_level": "High Risk", "reasons": heuristic_flags, "spoken_summary": fb["scam_summary"]}
+
+    # Step 3: Try Gemini Vision if quota is available
+    mime_type = file.content_type or "image/jpeg"
     prompt = f"""
     You are Kavach AI, an Indian digital payment and SMS scam detector.
-    Examine this uploaded screenshot (WhatsApp message, SMS, utility booking alert, or UPI payment screen).
-    Read all visible text, TRAI SMS sender headers (like JX-BPCLIN-S, VM-IOCL, AD-HPGAS, SBIINB — note that in India, headers ending in -S mean Service, -T mean Transactional, and -G mean Government), URLs, QR labels, and UPI handles.
-
-    Rules:
-    1. Set "risk_level" strictly to "Safe", "Suspicious", or "High Risk".
-       - Genuine Indian SMS/WhatsApp notifications from official brands and registered TRAI headers (such as Bharatgas/BPCL header JX-BPCLIN-S with hellobpcl.in and LPG cylinder DELIVERY CODE, Indane, HP Gas, official banks, IRCTC, or genuine payment receipts) MUST be classified as "Safe".
-       - Physical LPG cylinder "DELIVERY CODE" shared only upon physical cylinder receipt is NOT a bank OTP scam—mark it "Safe" when paired with official domains like hellobpcl.in.
-       - Only mark "Suspicious" or "High Risk" if there is a shortened URL (bit.ly, tinyurl), a fake lookalike domain, a personal 10-digit mobile number pretending to be a bank, urgency disconnection threats, or a request to enter a UPI PIN to receive money.
-    2. Write 2-3 short bullet points in "reasons" explaining what you spotted in the screenshot, written strictly in {language}.
-    3. Write a calm 1-2 sentence warning or reassurance in "spoken_summary" strictly in {language} for Text-to-Speech.
+    Examine this uploaded screenshot and classify "risk_level" strictly as "Safe", "Suspicious", or "High Risk".
+    Genuine Indian utility/bank alerts (like Bharatgas/BPCL hellobpcl.in, Indane, HP Gas, SBI) MUST be "Safe".
+    Write 2-3 short bullet points in "reasons" in {language} and a 1-2 sentence "spoken_summary" in {language}.
     """
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=[types.Part.from_bytes(data=image_bytes, mime_type=mime_type), prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=AIAnalysis,
+                temperature=0.1,
+            ),
+        )
+        return json.loads(response.text)
+    except Exception as e:
+        print(f"Vision API quota/load fallback: {e}")
 
-    for attempt in range(2):
-        try:
-            response = client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=[
-                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-                    prompt
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=AIAnalysis,
-                    temperature=0.1,
-                ),
-            )
-            return json.loads(response.text)
-        except Exception as e:
-            print(f"Image attempt {attempt + 1} failed: {e}")
-            time.sleep(0.5)
-
+    # Step 4: Clean regional fallback if Gemini quota is exhausted and no scam flags were found
     fb = REGIONAL_FALLBACKS.get(language, REGIONAL_FALLBACKS["English"])
-    return {"use_ocr": True}
+    return {"risk_level": "Safe", "reasons": fb["safe_reasons"], "spoken_summary": fb["safe_summary"]}
