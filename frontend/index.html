@@ -190,7 +190,7 @@
         latestSpoken = data.spoken_summary;
         document.getElementById("spokenPreview").innerText = "Voice Summary: " + latestSpoken;
       } catch (e) {
-        alert("Server error. Please check your connection.");
+        alert("Exact Error:" + e.message);
       } finally {
         btn.innerText = "Verify Now";
         btn.disabled = false;
