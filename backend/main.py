@@ -107,6 +107,10 @@ class AIAnalysis(BaseModel):
 @app.post("/analyze")
 def analyze_message(req: ScamRequest):
     heuristic_flags, trusted_notes = run_heuristics(req.message)
+    if len(trusted_notes) > 0 and len(heuristic_flags) == 0:
+    fb = REGIONAL_FALLBACKS.get(req.language, REGIONAL_FALLBACKS["English"])
+    return {"risk_level": "Safe", "reasons": trusted_notes, "spoken_summary": fb["safe_summary"]}
+
 
     prompt = f"""
     You are Kavach AI, an Indian digital payment and SMS scam detector.
