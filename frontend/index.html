@@ -13,11 +13,29 @@
     header h1 span { color: #ef4444; }
     header p { margin: 0; font-size: 13px; color: #94a3b8; }
     .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
-    label { display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    label { font-size: 13px; font-weight: 600; color: #cbd5e1; margin: 0; }
+    .clear-btn { background: none; border: none; color: #94a3b8; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+    .clear-btn:hover { color: #fff; }
     textarea, select { width: 100%; background: #020617; border: 1px solid #334155; border-radius: 12px; padding: 12px; color: #fff; font-size: 14px; }
     .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
     .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 999px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
     .chip:hover { background: #334155; color: #fff; }
+
+    .upload-box {
+      border: 1.5px dashed #334155;
+      background: #020617;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      margin: 12px 0;
+      cursor: pointer;
+    }
+    .upload-box:hover { border-color: #ef4444; }
+    .upload-label { font-size: 13px; color: #cbd5e1; font-weight: 600; display: block; cursor: pointer; }
+    .upload-sub { font-size: 11px; color: #64748b; display: block; margin-top: 2px; }
+    #previewImg { max-width: 100%; max-height: 160px; border-radius: 8px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
+
     .btn-primary { width: 100%; background: #dc2626; color: #fff; border: none; border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px; }
     .btn-primary:disabled { opacity: 0.6; }
     .result-card { display: none; border-radius: 16px; padding: 16px; border: 1px solid; }
@@ -36,21 +54,33 @@
   <div class="container">
     <header>
       <h1>Kavach <span>AI</span></h1>
-      <p>Vernacular UPI & SMS Scam Detector</p>
+      <p>Vernacular UPI, SMS & Screenshot Scam Detector</p>
     </header>
 
     <div class="card">
-      <label for="messageInput">Message to Verify</label>
-      <textarea id="messageInput" rows="4" placeholder="Paste suspicious SMS, WhatsApp forward, or payment link..."></textarea>
+      <div class="label-row">
+        <label for="messageInput">Paste Message or Link</label>
+        <button type="button" class="clear-btn" id="clearBtn">Clear All</button>
+      </div>
+      <textarea id="messageInput" rows="3" placeholder="Paste suspicious SMS, WhatsApp forward, or payment link..."></textarea>
 
       <div class="chips">
-        <button type="button" class="chip" id="c1">Electricity Scam</button>
-        <button type="button" class="chip" id="c2">Kanglish KYC</button>
-        <button type="button" class="chip" id="c3">Fake UPI Prize</button>
-        <button type="button" class="chip" id="c4">Safe Bank SMS</button>
+        <button type="button" class="chip" id="c1">⚡ Electricity Scam</button>
+        <button type="button" class="chip" id="c2">🗣️ Kanglish KYC</button>
+        <button type="button" class="chip" id="c3">💸 Fake UPI Prize</button>
+        <button type="button" class="chip" id="c4">✅ Safe Bank SMS</button>
       </div>
 
-      <label for="languageSelect">Preferred Language</label>
+      <div class="upload-box" id="uploadBox">
+        <input type="file" id="imageInput" accept="image/*" style="display: none;" />
+        <span class="upload-label">📸 Or Upload Scam Screenshot / QR</span>
+        <span class="upload-sub" id="fileNameLabel">Tap to select WhatsApp, SMS, or UPI payment screenshot</span>
+        <img id="previewImg" alt="Screenshot preview" />
+      </div>
+
+      <div class="label-row" style="margin-top: 10px;">
+        <label for="languageSelect">Preferred Language</label>
+      </div>
       <select id="languageSelect">
         <option value="English">English (India)</option>
         <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
@@ -58,7 +88,7 @@
         <option value="Tamil">தமிழ் (Tamil)</option>
       </select>
 
-      <button type="button" class="btn-primary" id="verifyBtn">Verify Message</button>
+      <button type="button" class="btn-primary" id="verifyBtn">Verify Now</button>
     </div>
 
     <div id="resultCard" class="result-card">
@@ -76,41 +106,76 @@
   <script>
     let latestSpoken = "";
     const box = document.getElementById("messageInput");
+    const imageInput = document.getElementById("imageInput");
+    const previewImg = document.getElementById("previewImg");
+    const fileNameLabel = document.getElementById("fileNameLabel");
 
-    document.getElementById("c1").onclick = () => {
-      box.value = "Dear Customer, your BESCOM electricity bill is pending. Pay now to avoid disconnection tonight. Click: http://bit.ly";
+    document.getElementById("uploadBox").onclick = () => imageInput.click();
+
+    imageInput.onchange = () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+      box.value = ""; // Clear text when an image is chosen
+      fileNameLabel.innerText = "Selected: " + file.name;
+      previewImg.src = URL.createObjectURL(file);
+      previewImg.style.display = "block";
     };
-    document.getElementById("c2").onclick = () => {
-      box.value = "Nimma SBI account KYC expire agide! Urgent update madi illandre account block agutte: http://tinyurl.com";
-    };
-    document.getElementById("c3").onclick = () => {
-      box.value = "Congratulations! You won Rs. 15,000 cashback. Approve UPI collect request on claimprize@okicici to receive money.";
-    };
-    document.getElementById("c4").onclick = () => {
-      box.value = "Rs.500.00 credited to A/c XX1234 via UPI Ref 6328192012. Thank you for banking with SBI.";
-    };
+
+    function resetInputs() {
+      box.value = "";
+      imageInput.value = "";
+      previewImg.style.display = "none";
+      previewImg.src = "";
+      fileNameLabel.innerText = "Tap to select WhatsApp, SMS, or UPI payment screenshot";
+      document.getElementById("resultCard").className = "result-card";
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    document.getElementById("clearBtn").onclick = resetInputs;
+
+    function setSampleText(txt) {
+      imageInput.value = "";
+      previewImg.style.display = "none";
+      fileNameLabel.innerText = "Tap to select WhatsApp, SMS, or UPI payment screenshot";
+      box.value = txt;
+    }
+
+    document.getElementById("c1").onclick = () => setSampleText("Dear Customer, your BESCOM electricity bill is pending. Pay now to avoid disconnection tonight. Click: http://bit.ly");
+    document.getElementById("c2").onclick = () => setSampleText("Nimma SBI account KYC expire agide! Urgent update madi illandre account block agutte: http://tinyurl.com");
+    document.getElementById("c3").onclick = () => setSampleText("Congratulations! You won Rs. 15,000 cashback. Approve UPI collect request on claimprize@okicici to receive money.");
+    document.getElementById("c4").onclick = () => setSampleText("Rs.500.00 credited to A/c XX1234 via UPI Ref 6328192012. Thank you for banking with SBI.");
 
     document.getElementById("verifyBtn").onclick = async () => {
       const message = box.value.trim();
+      const imageFile = imageInput.files[0];
       const language = document.getElementById("languageSelect").value;
-      if (!message) {
-        alert("Please type or click a sample first.");
+
+      if (!message && !imageFile) {
+        alert("Please paste a message, tap a sample, or upload a screenshot first.");
         return;
       }
 
       if (window.speechSynthesis) window.speechSynthesis.cancel();
       const btn = document.getElementById("verifyBtn");
-      btn.innerText = "Scanning...";
+      btn.innerText = imageFile ? "Scanning Screenshot..." : "Scanning Message...";
       btn.disabled = true;
 
       try {
-        const res = await fetch("/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message, language })
-        });
-        const data = await res.json();
+        let res;
+        if (imageFile) {
+          const formData = new FormData();
+          formData.append("file", imageFile);
+          formData.append("language", language);
+          res = await fetch("/analyze-image", { method: "POST", body: formData });
+        } else {
+          res = await fetch("/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, language })
+          });
+        }
 
+        const data = await res.json();
         const card = document.getElementById("resultCard");
         const badge = document.getElementById("riskBadge");
         card.className = "result-card " + (
@@ -125,13 +190,12 @@
         latestSpoken = data.spoken_summary;
         document.getElementById("spokenPreview").innerText = "Voice Summary: " + latestSpoken;
       } catch (e) {
-        alert("Server error. Make sure Uvicorn is running on port 8081.");
+        alert("Server error. Please check your connection.");
       } finally {
-        btn.innerText = "Verify Message";
+        btn.innerText = "Verify Now";
         btn.disabled = false;
       }
     };
-
     document.getElementById("audioBtn").onclick = () => {
       if (!latestSpoken || !window.speechSynthesis) return;
       if (window.speechSynthesis.speaking) {

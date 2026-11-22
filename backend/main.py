@@ -4,18 +4,17 @@ import json
 import time
 from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
 
-# 6-second timeout so UI never hangs during traffic spikes
 load_dotenv()
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY"),
-    http_options={"timeout": 6000}
+    http_options={"timeout": 12000}
 )
 
 app = FastAPI()
@@ -61,7 +60,6 @@ def run_heuristics(text: str) -> list[str]:
 
     return flags
 
-# Regional fallback messages so vernacular UI & Voice work 100% even if Gemini hits a 503 traffic spike
 REGIONAL_FALLBACKS = {
     "English": {
         "scam_summary": "Warning! This message contains suspicious links or urgent payment traps. Do not click or share your PIN.",
@@ -90,6 +88,7 @@ class AIAnalysis(BaseModel):
     reasons: list[str]
     spoken_summary: str
 
+# --- TEXT ANALYSIS ENDPOINT ---
 @app.post("/analyze")
 def analyze_message(req: ScamRequest):
     heuristic_flags = run_heuristics(req.message)
@@ -108,7 +107,6 @@ def analyze_message(req: ScamRequest):
     3. Write a 1-2 sentence warning/reassurance in "spoken_summary" strictly in {req.language}.
     """
 
-    # Try gemini-3.8-flash twice quickly (6s timeout each)
     for attempt in range(2):
         try:
             response = client.models.generate_content(
@@ -122,19 +120,54 @@ def analyze_message(req: ScamRequest):
             )
             return json.loads(response.text)
         except Exception as e:
-            print(f"Attempt {attempt + 1} failed: {e}")
+            print(f"Text attempt {attempt + 1} failed: {e}")
             time.sleep(0.5)
 
-    # Instant Regional Fallback if Gemini has a 503 high-demand spike
     fb = REGIONAL_FALLBACKS.get(req.language, REGIONAL_FALLBACKS["English"])
     if len(heuristic_flags) > 0:
-        return {
-            "risk_level": "High Risk",
-            "reasons": heuristic_flags,
-            "spoken_summary": fb["scam_summary"]
-        }
+        return {"risk_level": "High Risk", "reasons": heuristic_flags, "spoken_summary": fb["scam_summary"]}
+    return {"risk_level": "Safe", "reasons": fb["safe_reasons"], "spoken_summary": fb["safe_summary"]}
+
+# --- SCREENSHOT / IMAGE VISION ANALYSIS ENDPOINT ---
+@app.post("/analyze-image")
+async def analyze_image(file: UploadFile = File(...), language: str = Form("English")):
+    image_bytes = await file.read()
+    mime_type = file.content_type or "image/jpeg"
+
+    prompt = f"""
+    You are Kavach AI, an Indian digital payment and SMS scam detector.
+    Examine this uploaded screenshot (it may be a WhatsApp message, SMS, fake bank KYC notice, or UPI QR/collect payment screen).
+    Read all visible text, URLs, sender headers, QR labels, and UPI handles in the image.
+    Detect fraud, phishing links, fake customer care numbers, urgency threats, or deceptive "Enter PIN to receive money" traps.
+
+    Rules:
+    1. Set "risk_level" strictly to "Safe", "Suspicious", or "High Risk". Genuine payment receipts or normal harmless screenshots are "Safe".
+    2. Write 2-3 short, crystal-clear bullet points in "reasons" explaining what you spotted in the screenshot, written strictly in {language}.
+    3. Write a calm 1-2 sentence warning or reassurance in "spoken_summary" strictly in {language} for Text-to-Speech.
+    """
+
+    for attempt in range(2):
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=[
+                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                    prompt
+                ],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=AIAnalysis,
+                    temperature=0.2,
+                ),
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            print(f"Image attempt {attempt + 1} failed: {e}")
+            time.sleep(0.5)
+
+    fb = REGIONAL_FALLBACKS.get(language, REGIONAL_FALLBACKS["English"])
     return {
-        "risk_level": "Safe",
-        "reasons": fb["safe_reasons"],
-        "spoken_summary": fb["safe_summary"]
+        "risk_level": "Suspicious",
+        "reasons": ["Could not reach Vision AI due to temporary server load. Verify sender and links manually before paying."],
+        "spoken_summary": fb["scam_summary"]
     }
