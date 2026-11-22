@@ -37,7 +37,6 @@ class ScamRequest(BaseModel):
     message: str
     language: str
 
-# Official verified Indian utility, gas, telecom, and bank domains
 TRUSTED_DOMAINS = (
     "indianoil.in", "cx.indianoil.in", "myhpgas.in", "ebharatgas.com",
     "hellobpcl.in", "bharatpetroleum.in",
@@ -45,7 +44,6 @@ TRUSTED_DOMAINS = (
     "bescom.co.in", "bescom.karnataka.gov.in", "gov.in", "nic.in", "irctc.co.in"
 )
 
-# --- LAYER 1: HEURISTIC ENGINE (REGEX + DOMAIN CHECK) ---
 def run_heuristics(text: str) -> tuple[list[str], list[str]]:
     flags = []
     trusted_notes = []
@@ -103,14 +101,13 @@ class AIAnalysis(BaseModel):
     reasons: list[str]
     spoken_summary: str
 
-# --- TEXT ANALYSIS ENDPOINT ---
 @app.post("/analyze")
 def analyze_message(req: ScamRequest):
     heuristic_flags, trusted_notes = run_heuristics(req.message)
+
     if len(trusted_notes) > 0 and len(heuristic_flags) == 0:
         fb = REGIONAL_FALLBACKS.get(req.language, REGIONAL_FALLBACKS["English"])
         return {"risk_level": "Safe", "reasons": trusted_notes, "spoken_summary": fb["safe_summary"]}
-
 
     prompt = f"""
     You are Kavach AI, an Indian digital payment and SMS scam detector.
@@ -124,7 +121,6 @@ def analyze_message(req: ScamRequest):
     Rules:
     1. Set "risk_level" strictly to "Safe", "Suspicious", or "High Risk".
        - Genuine utility notifications (e.g., Bharatgas/BPCL, Indane, or HP Gas LPG cylinder out-for-delivery tracking links like hellobpcl.in, physical delivery codes/DAC, legitimate bank alerts, IRCTC bookings) with NO shortened links, NO lookalike domains, and NO requests for UPI PIN/bank OTP MUST be classified as "Safe".
-       - Only mark "Suspicious" or "High Risk" if there is an unverified/shortened link, a fake lookalike domain, urgency threats, or a deceptive payment/PIN trap.
     2. Write 2-3 short bullet points in "reasons" in {req.language} explaining clearly why it is Safe, Suspicious, or High Risk.
     3. Write a 1-2 sentence warning or reassurance in "spoken_summary" strictly in {req.language}.
     """
@@ -150,7 +146,6 @@ def analyze_message(req: ScamRequest):
         return {"risk_level": "High Risk", "reasons": heuristic_flags, "spoken_summary": fb["scam_summary"]}
     return {"risk_level": "Safe", "reasons": trusted_notes if trusted_notes else fb["safe_reasons"], "spoken_summary": fb["safe_summary"]}
 
-# --- SCREENSHOT / IMAGE VISION ANALYSIS ENDPOINT ---
 @app.post("/analyze-image")
 async def analyze_image(file: UploadFile = File(...), language: str = Form("English")):
     image_bytes = await file.read()
@@ -169,7 +164,6 @@ async def analyze_image(file: UploadFile = File(...), language: str = Form("Engl
     2. Write 2-3 short bullet points in "reasons" explaining what you spotted in the screenshot, written strictly in {language}.
     3. Write a calm 1-2 sentence warning or reassurance in "spoken_summary" strictly in {language} for Text-to-Speech.
     """
-
 
     for attempt in range(2):
         try:
