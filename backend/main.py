@@ -108,8 +108,8 @@ class AIAnalysis(BaseModel):
 def analyze_message(req: ScamRequest):
     heuristic_flags, trusted_notes = run_heuristics(req.message)
     if len(trusted_notes) > 0 and len(heuristic_flags) == 0:
-    fb = REGIONAL_FALLBACKS.get(req.language, REGIONAL_FALLBACKS["English"])
-    return {"risk_level": "Safe", "reasons": trusted_notes, "spoken_summary": fb["safe_summary"]}
+        fb = REGIONAL_FALLBACKS.get(req.language, REGIONAL_FALLBACKS["English"])
+        return {"risk_level": "Safe", "reasons": trusted_notes, "spoken_summary": fb["safe_summary"]}
 
 
     prompt = f"""
@@ -159,14 +159,17 @@ async def analyze_image(file: UploadFile = File(...), language: str = Form("Engl
     prompt = f"""
     You are Kavach AI, an Indian digital payment and SMS scam detector.
     Examine this uploaded screenshot (WhatsApp message, SMS, utility booking alert, or UPI payment screen).
-    Read all visible text, sender IDs (like VM-IOCL, AD-HPGAS, BPCL, SBIINB), URLs, QR labels, and UPI handles.
+    Read all visible text, TRAI SMS sender headers (like JX-BPCLIN-S, VM-IOCL, AD-HPGAS, SBIINB — note that in India, headers ending in -S mean Service, -T mean Transactional, and -G mean Government), URLs, QR labels, and UPI handles.
 
     Rules:
     1. Set "risk_level" strictly to "Safe", "Suspicious", or "High Risk".
-       - Genuine SMS/WhatsApp confirmations from official brands (such as Bharatgas/BPCL, Indane, HP Gas LPG bookings with hellobpcl.in, official banks, IRCTC, or legitimate payment receipts) with NO UPI PIN/bank OTP requests MUST be classified as "Safe".
+       - Genuine Indian SMS/WhatsApp notifications from official brands and registered TRAI headers (such as Bharatgas/BPCL header JX-BPCLIN-S with hellobpcl.in and LPG cylinder DELIVERY CODE, Indane, HP Gas, official banks, IRCTC, or genuine payment receipts) MUST be classified as "Safe".
+       - Physical LPG cylinder "DELIVERY CODE" shared only upon physical cylinder receipt is NOT a bank OTP scam—mark it "Safe" when paired with official domains like hellobpcl.in.
+       - Only mark "Suspicious" or "High Risk" if there is a shortened URL (bit.ly, tinyurl), a fake lookalike domain, a personal 10-digit mobile number pretending to be a bank, urgency disconnection threats, or a request to enter a UPI PIN to receive money.
     2. Write 2-3 short bullet points in "reasons" explaining what you spotted in the screenshot, written strictly in {language}.
     3. Write a calm 1-2 sentence warning or reassurance in "spoken_summary" strictly in {language} for Text-to-Speech.
     """
+
 
     for attempt in range(2):
         try:
