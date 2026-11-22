@@ -168,20 +168,22 @@
 
         let data = await res.json();
 
-        // Automatic OCR backup if Vision AI hits a temporary 503 server load spike
-        if (imageFile && data.reasons && data.reasons[0] && data.reasons[0].includes("Could not reach Vision AI")) {
-          btn.innerText = "Running Backup OCR...";
-          const ocrResult = await Tesseract.recognize(imageFile, "eng");
-          const extractedText = ocrResult.data.text.trim();
-          if (extractedText) {
-            const fallbackRes = await fetch("/analyze", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ message: extractedText, language })
-            });
-            data = await fallbackRes.json();
-          }
-        }
+             // Automatic OCR backup if Vision AI hits a temporary 503 server load spike
+     if (imageFile && data.use_ocr) {
+       btn.innerText = "Reading Screenshot Text...";
+       const ocrResult = await Tesseract.recognize(imageFile, "eng");
+       const extractedText = ocrResult.data.text.trim();
+       const fallbackRes = await fetch("/analyze", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           message: extractedText || "Unreadable image text",
+           language
+         })
+       });
+       data = await fallbackRes.json();
+     }
+
 
         const card = document.getElementById("resultCard");
         const badge = document.getElementById("riskBadge");

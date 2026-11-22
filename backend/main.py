@@ -185,8 +185,4 @@ async def analyze_image(file: UploadFile = File(...), language: str = Form("Engl
             time.sleep(0.5)
 
     fb = REGIONAL_FALLBACKS.get(language, REGIONAL_FALLBACKS["English"])
-    return {
-        "risk_level": "Suspicious",
-        "reasons": ["Could not reach Vision AI due to temporary server load. Verify sender and links manually before paying."],
-        "spoken_summary": fb["scam_summary"]
-    }
+    return {"use_ocr": True}
