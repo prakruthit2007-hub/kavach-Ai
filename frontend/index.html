@@ -185,7 +185,7 @@
         const badge = document.getElementById("riskBadge");
         card.className = "result-card " + (data.risk_level === "High Risk" ? "result-high" : data.risk_level === "Suspicious" ? "result-med" : "result-safe");
         badge.innerText = data.risk_level === "High Risk" ? "⚠️ HIGH RISK — SCAM DETECTED" : data.risk_level === "Suspicious" ? "⚠️ SUSPICIOUS" : "✅ SAFE — NO THREAT FOUND";
-        document.getElementById("reasonsList").innerHTML = data.reasons.map(r => "<li>" + r + "</li>").join("");
+        document.getElementById("reasonsList").innerHTML = (data.reasons || ["Analysis complete."]).map(r => "<li>" + r + "</li>").join("");
         latestSpoken = data.spoken_summary;
         document.getElementById("spokenPreview").innerText = "Voice Summary: " + latestSpoken;
       } catch (e) {
