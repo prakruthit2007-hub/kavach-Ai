@@ -75,9 +75,20 @@ def run_heuristics(text: str) -> tuple[list[str], list[str]]:
     if upi_ids:
         flags.append(f"UPI ID handle detected: {', '.join(upi_ids)}")
 
-    urgency_words = ("disconnection", "kyc expire", "kyc pending", "account blocked", "lottery", "claim prize", "update pan", "expire agide")
+        urgency_words = ("disconnection", "kyc expire", "kyc pending", "account blocked", "lottery", "claim prize", "update pan", "expire agide")
     if any(word in text.lower() for word in urgency_words):
         flags.append("High-urgency social engineering threat detected")
+
+    # Detect money-doubling, guaranteed-return, and unsolicited money transfer scams (even without links/UPI IDs)
+    money_scam_patterns = (
+        r"\bdouble(?:d|ing)?\b",
+        r"\bguaranteed\s+return",
+        r"\b(?:give|send|pay|transfer)\s+(?:me\s+)?(?:rs\.?|₹|inr)?\s*\d+",
+        r"\b\d+\s*(?:rs\.?|₹|inr)\b.*\b(?:double|twice|2x|profit|tomorrow)\b",
+        r"\b(?:earn|win)\s+(?:rs\.?|₹|inr)?\s*\d+\s*(?:daily|per\s+day|tomorrow)\b",
+    )
+    if any(re.search(pat, text, re.IGNORECASE) for pat in money_scam_patterns):
+        flags.append("Unrealistic money-doubling or unsolicited payment request detected")
 
     return flags, trusted_notes
 
