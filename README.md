@@ -3,8 +3,8 @@
 **Kavach AI** protects everyday users and senior citizens across India from digital payment traps, fake KYC warnings, electricity disconnection threats, money-doubling scams, and deceptive UPI collect requests—in **English, Kannada, Hindi, and Tamil** with native **Text-to-Speech voice alerts**.
 
 ## 🌐 Live Prototype & Demo
-* **Live Web App (Render):** `<your-render-url>` *(Note: Hosted on Render free tier; allow ~45 seconds for initial wake-up)*
-* **2-Minute Demo Video:** `<your-demo-video-url>`
+* **Live Web App (Render):** `(https://kavach-ai-hekt.onrender.com)` *(Note: Hosted on Render free tier; allow ~45 seconds for initial wake-up)*
+* **2-Minute Demo Video:** (https://drive.google.com/file/d/165Sz-UxKEOie_v39CzWx0y9a8q-hmnCA/view?usp=sharing)
 
 ## ⚙️ Hybrid 3-Layer Architecture
 1. **Layer 1 — Deterministic Heuristic & Domain Engine:** Instantly flags shortened links (`bit.ly`, `tinyurl.com`), raw IP URLs, UPI collect handles (`@okicici`, `@ybl`), urgency threats, and money-doubling traps, while whitelisting verified Indian utility and bank domains (`hellobpcl.in`, `indianoil.in`, `sbi.co.in`, etc.) to prevent false alarms.
